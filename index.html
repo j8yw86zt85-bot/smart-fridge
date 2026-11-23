@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Умный холодильник — Генератор рецептов</title>
+<style>
+  :root {
+    --primary: #ff6b35;
+    --primary-hover: #e85a26;
+    --secondary: #2ec4b6;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --text: #2b2d42;
+    --text-muted: #6c757d;
+    --border: #e9ecef;
+    --success: #28a745;
+    --warning: #f59f00;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background-color: #e9ecef;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  .app-container {
+    width: 100%;
+    max-width: 480px;
+    background-color: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, var(--primary), #ff8e53);
+    color: white;
+    padding: 20px 16px 16px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  header p {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+
+  .badge-count {
+    background: rgba(255,255,255,0.25);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Navigation Tabs */
+  .tabs {
+    display: flex;
+    background: var(--card-bg);
+    margin: 12px 16px 0;
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  /* Main Content */
+  main {
+    flex: 1;
+    padding: 16px;
+    padding-bottom: 85px;
+    overflow-y: auto;
+  }
+
+  .view {
+    display: none;
+  }
+
+  .view.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Search & Controls */
+  .controls-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .search-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 14px;
+    background: var(--card-bg);
+    outline: none;
+  }
+
+  .search-input:focus {
+    border-color: var(--primary);
+  }
+
+  .btn-clear {
+    background: #fff0eb;
+    color: var(--primary);
+    border: 1px solid #ffd8c9;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-clear:hover {
+    background: #ffe2d6;
+  }
+
+  /* Categories */
+  .category-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+
+  .category-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+  }
+
+  .ingredients-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ing-chip {
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    background: #f1f3f5;
+    color: var(--text);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ing-chip.selected {
+    background: #fff4ef;
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .base-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: #eef9f8;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    border-left: 3px solid var(--secondary);
+  }
+
+  /* Bottom Floating Action */
+  .floating-bar {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    max-width: 480px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(8px);
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+  }
+
+  .btn-primary-full {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    transition: background 0.2s;
+  }
+
+  .btn-primary-full:hover {
+    background: var(--primary-hover);
+  }
+
+  /* Filters in Recipes */
+  .time-filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .filter-pill {
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .filter-pill.active {
+    background: var(--secondary);
+    color: white;
+    border-color: var(--secondary);
+  }
+
+  .section-heading {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin: 14px 0 8px;
+  }
+
+  /* Recipe Card */
+  .recipe-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .recipe-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .recipe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .recipe-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .fav-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #ced4da;
+    line-height: 1;
+  }
+
+  .fav-btn.active {
+    color: #ff4757;
+  }
+
+  .recipe-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .match-badge {
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  .match-100 {
+    background: #e6fcf5;
+    color: #0ca678;
+  }
+
+  .match-miss {
+    background: #fff9db;
+    color: #f08c00;
+  }
+
+  .recipe-ings {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .missing-text {
+    color: #e03131;
+    font-weight: 600;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    justify-content: center;
+    align-items: flex-end;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+  }
+
+  .modal-sheet {
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 480px;
+    max-height: 88vh;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    padding: 20px;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .modal-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .close-modal {
+    background: #f1f3f5;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .modal-section {
+    margin-top: 16px;
+  }
+
+  .modal-section h4 {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--primary);
+  }
+
+  .ing-list {
+    list-style: none;
+    font-size: 14px;
+  }
+
+  .ing-list li {
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .step-list {
+    padding-left: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .step-list li {
+    margin-bottom: 8px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state span {
+    font-size: 42px;
+    display: block;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <div class="header-top">
+      <h1>🧊 Умный холодильник</h1>
+      <span class="badge-count" id="selectedCounter">Выбрано: 0</span>
+    </div>
+    <p>Отметьте продукты, которые есть дома — подберем быстрые рецепты</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('fridge')">Холодильник</button>
+    <button class="tab-btn" onclick="switchTab('recipes')" id="recipesTabBtn">Рецепты</button>
+    <button class="tab-btn" onclick="switchTab('favorites')" id="favTabBtn">Избранное (0)</button>
+  </div>
+
+  <main>
+    <!-- ВКЛАДКА 1: ХОЛОДИЛЬНИК -->
+    <div id="view-fridge" class="view active">
+      <div class="base-note">
+        💡 <b>Базовые продукты</b> (соль, перец, вода, растительное масло) учитываются автоматически.
+      </div>
+
+      <div class="controls-bar">
+        <input type="text" id="ingSearch" class="search-input" placeholder="Быстрый поиск продукта..." oninput="renderIngredients()">
+        <button class="btn-clear" onclick="clearFridge()">Очистить</button>
+      </div>
+
+      <div id="categoriesContainer"></div>
+    </div>
+
+    <!-- ВКЛАДКА 2: РЕЦЕПТЫ -->
+    <div id="view-recipes" class="view">
+      <div class="time-filters">
+        <button class="filter-pill active" onclick="setTimeFilter(999, this)">Любое время</button>
+        <button class="filter-pill" onclick="setTimeFilter(15, this)">⚡ До 15 мин</button>
+        <button class="filter-pill" onclick="setTimeFilter(25, this)">⏱ До 25 мин</button>
+        <button class="filter-pill" onclick="setTimeFilter(40, this)">🍲 До 40 мин</button>
+      </div>
+      <div id="recipesResults"></div>
+    </div>
+
+    <!-- ВКЛАДКА 3: ИЗБРАННОЕ -->
+    <div id="view-favorites" class="view">
+      <div id="favoritesResults"></div>
+    </div>
+  </main>
+
+  <div class="floating-bar" id="floatingBar">
+    <button class="btn-primary-full" onclick="switchTab('recipes')">Показать подходящие рецепты</button>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО РЕЦЕПТА -->
+<div class="modal-overlay" id="recipeModal" onclick="closeModalOnBg(event)">
+  <div class="modal-sheet">
+    <div class="modal-top">
+      <h2 id="modalTitle" style="font-size: 19px;">Название блюда</h2>
+      <button class="close-modal" onclick="closeModal()">×</button>
+    </div>
+    <div class="recipe-meta" id="modalMeta"></div>
+    <div class="modal-section">
+      <h4>Необходимые продукты:</h4>
+      <ul class="ing-list" id="modalIngs"></ul>
+    </div>
+    <div class="modal-section">
+      <h4>Пошаговое приготовление:</h4>
+      <ol class="step-list" id="modalSteps"></ol>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CATEGORIES = [
+    {
+      name: "🥚 Молочное и яйца",
+      items: ["Яйца", "Молоко", "Сыр", "Сметана", "Творог", "Сливочное масло", "Кефир"]
+    },
+    {
+      name: "🍅 Овощи и зелень",
+      items: ["Помидоры", "Огурцы", "Картофель", "Лук репчатый", "Морковь", "Болгарский перец", "Капуста", "Чеснок", "Зелень"]
+    },
+    {
+      name: "🍗 Мясо, птица и колбасы",
+      items: ["Куриное филе", "Фарш", "Сосиски", "Колбаса", "Ветчина", "Тушенка"]
+    },
+    {
+      name: "🌾 Крупы, макароны и хлеб",
+      items: ["Макароны", "Гречка", "Рис", "Овсяные хлопья", "Хлеб / Батон", "Лаваш", "Мука"]
+    },
+    {
+      name: "🍎 Фрукты и дополнения",
+      items: ["Яблоки", "Банан", "Сахар", "Томатная паста", "Консервированная кукуруза", "Фасоль консервированная"]
+    }
+  ];
+
+  const RECIPES = [
+    {
+      id: 1,
+      title: "Омлет с сыром и томатами",
+      time: 10,
+      calories: "240 ккал",
+      category: "Завтрак",
+      ingredients: ["Яйца", "Молоко", "Сыр", "Помидоры"],
+      steps: [
+        "Взбейте яйца с молоком и щепоткой соли в миске.",
+        "Нарежьте помидоры кубиками, сыр натрите на терке.",
+        "Обжарьте помидоры на сковороде 2 минуты, залейте яичной смесью.",
+        "Посыпьте сыром, накройте крышкой и готовьте на слабом огне 5–7 минут."
+      ]
+    },
+    {
+      id: 2,
+      title: "Горячие бутерброды с ветчиной и сыром",
+      time: 10,
+      calories: "310 ккал",
+      category: "Перекус",
+      ingredients: ["Хлеб / Батон", "Сыр", "Ветчина", "Помидоры"],
+      steps: [
+        "Нарежьте батон ломтиками, ветчину и помидоры — тонкими кружочками.",
+        "Выложите на хлеб ветчину, помидор и накройте ломтиком сыра.",
+        "Запекайте в микроволновке 1,5 минуты или в духовке 5–7 минут до расплавления сыра."
+      ]
+    },
+    {
+      id: 3,
+      title: "Макароны по-флотски с фаршем",
+      time: 25,
+      calories: "380 ккал",
+      category: "Обед / Ужин",
+      ingredients: ["Макароны", "Фарш", "Лук репчатый"],
+      steps: [
+        "Отварите макароны в подсоленной воде до готовности.",
+        "Мелко нарежьте лук и обжарьте на сковороде до золотистости.",
+        "Добавьте фарш, посолите, поперчите и обжаривайте 12–15 минут.",
+        "Смешайте готовые макароны с фаршем и прогрейте вместе 2 минуты."
+      ]
+    },
+    {
+      id: 4,
+      title: "Шакшука (яичница в томатном соусе)",
+      time: 15,
+      calories: "210 ккал",
+      category: "Завтрак",
+      ingredients: ["Яйца", "Помидоры", "Болгарский перец", "Лук репчатый", "Чеснок"],
+      steps: [
+        "Нарежьте лук, перец и помидоры мелкими кубиками.",
+        "Обжарьте лук и перец 5 минут, добавьте помидоры и тушите еще 5 минут.",
+        "Сделайте в овощах углубления, разбейте туда яйца и готовьте под крышкой 4–5 минут."
+      ]
+    },
+    {
+      id: 5,
+      title: "Сырники классические",
+      time: 20,
+      calories: "290 ккал",
+      category: "Завтрак",
+      ingredients: ["Творог", "Яйца", "Мука", "Сахар"],
+      steps: [
+        "Разомните творог вилкой, добавьте яйцо, сахар и 2 ст. ложки муки.",
+        "Сформируйте небольшие лепешки и обваляйте их в муке.",
+        "Обжаривайте на разогретой сковороде с двух сторон по 3–4 минуты до румяной корочки."
+      ]
+    },
+    {
+      id: 6,
+      title: "Куриное филе в сметанном соусе",
+      time: 25,
+      calories: "260 ккал",
+      category: "Обед / Ужин",
+      ingredients: ["Куриное филе", "Сметана", "Лук репчатый", "Чеснок"],
+      steps: [
+        "Нарежьте куриное филе небольшими кусочками, лук — полукольцами.",
+        "Обжарьте курицу с луком на сильном огне 7 минут.",
+        "Добавьте сметану, измельченный чеснок, соль и немного воды. Тушите 10 минут."
+      ]
+    },
+    {
+      id: 7,
+      title: "Овсяноблин с сыром",
+      time: 10,
+      calories: "270 ккал",
+      category: "Завтрак",
+      ingredients: ["Овсяные хлопья", "Яйца", "Молоко", "Сыр"],
+      steps: [
+        "Смешайте 4 ст. ложки овсяных хлопьев, 1 яйцо и 3 ст. ложки молока, оставьте на 3 минуты.",
+        "Вылейте массу на сковороду и обжарьте с одной стороны 3 минуты.",
+        "Переверните блин, на половину выложите тертый сыр, сложите пополам и держите еще 2 минуты."
+      ]
+    },
+    {
+      id: 8,
+      title: "Гречка по-купечески с курицей",
+      time: 35,
+      calories: "310 ккал",
+      category: "Обед / Ужин",
+      ingredients: ["Гречка", "Куриное филе", "Морковь", "Лук репчатый"],
+      steps: [
+        "Обжарьте нарезанное куриное филе с луком и тертой морковью 8 минут.",
+        "Всыпьте промытую гречку, залейте водой в пропорции 1:2, посолите.",
+        "Накройте крышкой и томите на медленном огне 20 минут до впитывания воды."
+      ]
+    },
+    {
+      id: 9,
+      title: "Рулетики из лаваша с сыром и зеленью",
+      time: 10,
+      calories: "250 ккал",
+      category: "Перекус",
+      ingredients: ["Лаваш", "Сыр", "Сметана", "Зелень"],
+      steps: [
+        "Натрите сыр на мелкой терке, мелко порубите зелень и смешайте со сметаной.",
+        "Смажьте лист лаваша начинкой и сверните в плотный рулет.",
+        "Нарежьте порционными кусочками (при желании обжарьте на сухой сковороде по 1 минуте)."
+      ]
+    },
+    {
+      id: 10,
+      title: "Жареный картофель с луком",
+      time: 25,
+      calories: "280 ккал",
+      category: "Обед / Ужин",
+      ingredients: ["Картофель", "Лук репчатый"],
+      steps: [
+        "Очистите картофель и нарежьте брусочками, обсушите бумажным полотенцем.",
+        "Выложите на хорошо разогретую сковороду с маслом, жарьте 10 минут не перемешивая.",
+        "Перемешайте, добавьте нарезанный лук и соль, жарьте еще 10–12 минут до готовности."
+      ]
+    },
+    {
+      id: 11,
+      title: "Овощной салат со сметаной",
+      time: 10,
+      calories: "120 ккал",
+      category: "Перекус",
+      ingredients: ["Помидоры", "Огурцы", "Лук репчатый", "Сметана", "Зелень"],
+      steps: [
+        "Нарежьте помидоры и огурцы крупными дольками, лук — тонкими полукольцами.",
+        "Измельчите зелень, соедините все овощи в салатнике.",
+        "Посолите и заправьте сметаной перед подачей."
+      ]
+    },
+    {
+      id: 12,
+      title: "Быстрая пицца на сковороде",
+      time: 15,
+      calories: "340 ккал",
+      category: "Перекус",
+      ingredients: ["Яйца", "Сметана", "Мука", "Колбаса", "Сыр", "Помидоры"],
+      steps: [
+        "Смешайте 2 яйца, 4 ст. ложки сметаны и 4 ст. ложки муки до консистенции густой сметаны.",
+        "Вылейте тесто на холодную сковороду, сверху выложите колбасу, помидоры и тертый сыр.",
+        "Накройте крышкой и готовьте на медленном огне 10–12 минут."
+      ]
+    },
+    {
+      id: 13,
+      title: "Банановые панкейки без сахара",
+      time: 15,
+      calories: "220 ккал",
+      category: "Завтрак",
+      ingredients: ["Банан", "Яйца", "Мука", "Молоко"],
+      steps: [
+        "Разомните спелый банан вилкой в пюре, добавьте яйцо и 50 мл молока.",
+        "Всыпьте 3–4 ст. ложки муки и перемешайте до однородности.",
+        "Выпекайте небольшие оладьи на сухой антипригарной сковороде по 2 минуты с каждой стороны."
+      ]
+    },
+    {
+      id: 14,
+      title: "Рис с овощами и кукурузой",
+      time: 25,
+      calories: "230 ккал",
+      category: "Обед / Ужин",
+      ingredients: ["Рис", "Морковь", "Лук репчатый", "Консервированная кукуруза"],
+      steps: [
+        "Отварите рис до готовности в подсоленной воде.",
+        "Обжарьте нарезанный лук и тертую морковь 5 минут, добавьте кукурузу.",
+        "Соедините овощи с рисом и прогрейте на сковороде 3 минуты."
+      ]
+    },
+    {
+      id: 15,
+      title: "Оладьи на кефире пышные",
+      time: 20,
+      calories: "260 ккал",
+      category: "Завтрак",
+      ingredients: ["Кефир", "Яйца", "Мука", "Сахар"],
+      steps: [
+        "Смешайте теплый кефир с яйцом, сахаром и щепоткой соли.",
+        "Постепенно вмешайте муку до густого, вязкого теста.",
+        "Выкладывайте ложкой на сковороду с маслом и жарьте под крышкой по 2–3 минуты с каждой стороны."
+      ]
+    },
+    {
+      id: 16,
+      title: "Тушеная капуста с сосисками",
+      time: 25,
+      calories: "250 ккал",
+      category: "Обед / Ужин",
+      ingredients: ["Капуста", "Сосиски", "Морковь", "Лук репчатый", "Томатная паста"],
+      steps: [
+        "Нашинкуйте капусту, натрите морковь, нарежьте лук и сосиски кружочками.",
+        "Обжарьте лук, морковь и сосиски 5 минут, затем добавьте капусту и 1 ст. ложку томатной пасты.",
+        "Влейте полстакана воды и тушите под крышкой 15–18 минут."
+      ]
+    }
+  ];
+
+  let selectedIngredients = new Set(["Яйца", "Сыр", "Помидоры"]);
+  let favoriteIds = new Set();
+  let maxTimeFilter = 999;
+
+  function init() {
+    renderIngredients();
+    updateCounters();
+  }
+
+  function renderIngredients() {
+    const query = document.getElementById("ingSearch").value.toLowerCase().trim();
+    const container = document.getElementById("categoriesContainer");
+    container.innerHTML = "";
+
+    CATEGORIES.forEach(cat => {
+      const filteredItems = cat.items.filter(item => item.toLowerCase().includes(query));
+      if (filteredItems.length === 0) return;
+
+      const card = document.createElement("div");
+      card.className = "category-card";
+
+      const title = document.createElement("div");
+      title.className = "category-title";
+      title.textContent = cat.name;
+      card.appendChild(title);
+
+      const grid = document.createElement("div");
+      grid.className = "ingredients-grid";
+
+      filteredItems.forEach(item => {
+        const chip = document.createElement("div");
+        const isSel = selectedIngredients.has(item);
+        chip.className = "ing-chip" + (isSel ? " selected" : "");
+        chip.innerHTML = (isSel ? "✓ " : "+ ") + item;
+        chip.onclick = () => toggleIngredient(item);
+        grid.appendChild(chip);
+      });
+
+      card.appendChild(grid);
+      container.appendChild(card);
+    });
+  }
+
+  function toggleIngredient(item) {
+    if (selectedIngredients.has(item)) {
+      selectedIngredients.delete(item);
+    } else {
+      selectedIngredients.add(item);
+    }
+    renderIngredients();
+    updateCounters();
+  }
+
+  function clearFridge() {
+    selectedIngredients.clear();
+    document.getElementById("ingSearch").value = "";
+    renderIngredients();
+    updateCounters();
+  }
+
+  function updateCounters() {
+    document.getElementById("selectedCounter").textContent = `Выбрано: ${selectedIngredients.size}`;
+    document.getElementById("favTabBtn").textContent = `Избранное (${favoriteIds.size})`;
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(view => view.classList.remove("active"));
+
+    if (tabName === "fridge") {
+      document.querySelectorAll(".tab-btn")[0].classList.add("active");
+      document.getElementById("view-fridge").classList.add("active");
+      document.getElementById("floatingBar").style.display = "flex";
+    } else if (tabName === "recipes") {
+      document.querySelectorAll(".tab-btn")[1].classList.add("active");
+      document.getElementById("view-recipes").classList.add("active");
+      document.getElementById("floatingBar").style.display = "none";
+      renderRecipes();
+    } else if (tabName === "favorites") {
+      document.querySelectorAll(".tab-btn")[2].classList.add("active");
+      document.getElementById("view-favorites").classList.add("active");
+      document.getElementById("floatingBar").style.display = "none";
+      renderFavorites();
+    }
+  }
+
+  function setTimeFilter(minutes, btnElement) {
+    maxTimeFilter = minutes;
+    document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
+    btnElement.classList.add("active");
+    renderRecipes();
+  }
+
+  function evaluateRecipes() {
+    return RECIPES.filter(r => r.time <= maxTimeFilter).map(recipe => {
+      const present = recipe.ingredients.filter(i => selectedIngredients.has(i));
+      const missing = recipe.ingredients.filter(i => !selectedIngredients.has(i));
+      const matchRatio = present.length / recipe.ingredients.length;
+      return {
+        ...recipe,
+        present,
+        missing,
+        matchRatio
+      };
+    });
+  }
+
+  function renderRecipes() {
+    const container = document.getElementById("recipesResults");
+    container.innerHTML = "";
+
+    if (selectedIngredients.size === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <span>🧊</span>
+          <h3>Холодильник пуст</h3>
+          <p>Вернитесь на первую вкладку и выберите хотя бы 1–2 продукта.</p>
+        </div>`;
+      return;
+    }
+
+    const evaluated = evaluateRecipes();
+    const fullMatch = evaluated.filter(r => r.missing.length === 0);
+    const almostMatch = evaluated
+      .filter(r => r.missing.length === 1 && r.present.length >= 1)
+      .sort((a, b) => b.matchRatio - a.matchRatio);
+
+    if (fullMatch.length === 0 && almostMatch.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <span>🔍</span>
+          <h3>Точных совпадений не найдено</h3>
+          <p>Попробуйте выбрать больше продуктов или увеличить фильтр времени готовки.</p>
+        </div>`;
+      return;
+    }
+
+    if (fullMatch.length > 0) {
+      const h1 = document.createElement("div");
+      h1.className = "section-heading";
+      h1.textContent = `✅ Можно приготовить прямо сейчас (${fullMatch.length})`;
+      container.appendChild(h1);
+      fullMatch.forEach(r => container.appendChild(createRecipeCard(r)));
+    }
+
+    if (almostMatch.length > 0) {
+      const h2 = document.createElement("div");
+      h2.className = "section-heading";
+      h2.textContent = `🛒 Не хватает 1 ингредиента (${almostMatch.length})`;
+      container.appendChild(h2);
+      almostMatch.forEach(r => container.appendChild(createRecipeCard(r)));
+    }
+  }
+
+  function renderFavorites() {
+    const container = document.getElementById("favoritesResults");
+    container.innerHTML = "";
+
+    const favRecipes = evaluateRecipes().filter(r => favoriteIds.has(r.id));
+    if (favRecipes.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <span>❤️</span>
+          <h3>В избранном пока пусто</h3>
+          <p>Нажмите на сердечко в карточке любого рецепта, чтобы сохранить его здесь.</p>
+        </div>`;
+      return;
+    }
+
+    favRecipes.forEach(r => container.appendChild(createRecipeCard(r)));
+  }
+
+  function createRecipeCard(recipe) {
+    const card = document.createElement("div");
+    card.className = "recipe-card";
+    card.onclick = (e) => {
+      if (!e.target.classList.contains("fav-btn")) {
+        openModal(recipe);
+      }
+    };
+
+    const isFav = favoriteIds.has(recipe.id);
+    const badgeHtml = recipe.missing.length === 0
+      ? `<span class="match-badge match-100">100% продуктов есть</span>`
+      : `<span class="match-badge match-miss">Нужно докупить: ${recipe.missing[0]}</span>`;
+
+    card.innerHTML = `
+      <div class="recipe-header">
+        <div class="recipe-title">${recipe.title}</div>
+        <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFav(${recipe.id}, event)">♥</button>
+      </div>
+      <div class="recipe-meta">
+        <span>⏱ ${recipe.time} мин</span>
+        <span>🔥 ${recipe.calories}</span>
+        <span>🍽 ${recipe.category}</span>
+      </div>
+      <div style="margin-bottom: 8px;">${badgeHtml}</div>
+      <div class="recipe-ings">
+        <b>Состав:</b> ${recipe.ingredients.map(i => 
+          selectedIngredients.has(i) ? i : `<span class="missing-text">${i}</span>`
+        ).join(", ")}
+      </div>
+    `;
+    return card;
+  }
+
+  function toggleFav(id, event) {
+    event.stopPropagation();
+    if (favoriteIds.has(id)) {
+      favoriteIds.delete(id);
+    } else {
+      favoriteIds.add(id);
+    }
+    updateCounters();
+    if (document.getElementById("view-recipes").classList.contains("active")) {
+      renderRecipes();
+    } else {
+      renderFavorites();
+    }
+  }
+
+  function openModal(recipe) {
+    document.getElementById("modalTitle").textContent = recipe.title;
+    document.getElementById("modalMeta").innerHTML = `
+      <span>⏱ ${recipe.time} мин</span>
+      <span>🔥 ${recipe.calories}</span>
+      <span>🍽 ${recipe.category}</span>
+    `;
+
+    const ingList = document.getElementById("modalIngs");
+    ingList.innerHTML = "";
+    recipe.ingredients.forEach(ing => {
+      const li = document.createElement("li");
+      const hasIt = selectedIngredients.has(ing);
+      li.innerHTML = `<span>${ing}</span><span style="color:${hasIt ? '#0ca678' : '#e03131'}; font-weight:600;">${hasIt ? '✓ В наличии' : '✕ Нет'}</span>`;
+      ingList.appendChild(li);
+    });
+
+    const stepList = document.getElementById("modalSteps");
+    stepList.innerHTML = "";
+    recipe.steps.forEach(step => {
+      const li = document.createElement("li");
+      li.textContent = step;
+      stepList.appendChild(li);
+    });
+
+    document.getElementById("recipeModal").classList.add("open");
+  }
+
+  function closeModal() {
+    document.getElementById("recipeModal").classList.remove("open");
+  }
+
+  function closeModalOnBg(e) {
+    if (e.target.id === "recipeModal") {
+      closeModal();
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
